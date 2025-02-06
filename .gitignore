@@ -1,0 +1,33 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment files
+.env
+
+# Build output
+/dist
+/build
+/out
+/public
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.bak
+*.tmp
+*.swp
+
+# Coverage directory
+coverage/
+
+# Test directories (if not needed in production)
+tests/
+__tests__/
+node_modules
