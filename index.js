@@ -56,8 +56,8 @@ app.get("/set-session", (req, res) => {
   };
   res.send("set OK");
 });
-app.get("/get", (req, res) => {
-  res.send("Server BeautyBox On");
+app.get("/", (req, res) => {
+  res.send("Server Baya On");
 });
 app.use((req, res, next) => {
   const error = new Error("Not found");
