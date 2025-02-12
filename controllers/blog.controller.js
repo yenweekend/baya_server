@@ -5,7 +5,7 @@ const {
   BlogDetailTag,
   Tag,
 } = require("../models/association");
-const { Op } = require("sequelize");
+const { Op, where } = require("sequelize");
 module.exports = {
   createBLog: asyncHandler(async (req, res, next) => {
     try {
@@ -71,6 +71,34 @@ module.exports = {
       const slug = req.params.slug;
       const blogDetail = await BlogDetail.findOne({
         where: { slug: slug },
+        attributes: {
+          exclude: ["blog_id", "id"],
+        },
+        include: [
+          {
+            model: Blog,
+            attributes: { exclude: ["id"] },
+          },
+        ],
+      });
+      const blog = await Blog.findOne({
+        where: {
+          slug: blogDetail.Blog.slug,
+        },
+      });
+      const relatedBlogs = await blog.getBlogDetails({
+        where: {
+          slug: { [Op.ne]: blogDetail.slug }, // Exclude the current blog detail by slug
+          // Add other conditions for related blogs, if needed
+        },
+        limit: 6,
+        attributes: { exclude: ["blog_id"] },
+        include: [
+          {
+            model: Blog, // Include the Blog model
+            attributes: { exclude: ["id"] }, // Optionally exclude attributes from the Blog model
+          },
+        ],
       });
 
       if (!blogDetail) {
@@ -79,6 +107,30 @@ module.exports = {
       res.status(201).json({
         message: "Get Blog Detail successfully",
         data: blogDetail,
+        relateBlogs: relatedBlogs,
+      });
+    } catch (error) {
+      throw error;
+    }
+  }),
+  getLastestBlog: asyncHandler(async (req, res, next) => {
+    try {
+      const latestBlogs = await BlogDetail.findAll({
+        attributes: {
+          exclude: ["id", "blog_id", "content"],
+        },
+        include: [
+          {
+            model: Blog,
+            attributes: ["title", "slug"],
+          },
+        ],
+        order: [["createdAt", "DESC"]],
+        limit: 4,
+      });
+      res.status(201).json({
+        message: "Get Blog Detail successfully",
+        data: latestBlogs,
       });
     } catch (error) {
       throw error;

@@ -1,16 +1,6 @@
 const { promisify } = require("util");
 const client = require("../databases/init.redis");
-// cách mới để chuyển từ 1 hàm callback-style -> promise style
-// const redis_hset = promisify(client.hSet).bind(client);
-// const redis_hget = promisify(client.hGet).bind(client);
-// const redis_hincreby = promisify(client.hIncrBy).bind(client);
-// const redis_setnx = promisify(client.setNX).bind(client);
-// const redis_exists = promisify(client.exists).bind(client);
-// const redis_hgetall = promisify(client.hGetAll).bind(client);
-// const redis_increby = promisify(client.incrBy).bind(client);
-// const redis_get = promisify(client.get).bind(client);
-// const redis_set = promisify(client.set).bind(client);
-// const redis_lrange = promisify(client.lRange).bind(client);
+
 const redis_hset = (key, field, value) => client.hSet(key, field, value);
 const redis_hget = (key, field) => client.hGet(key, field);
 const redis_hdel = (key, field) => client.hDel(key, field);
@@ -46,3 +36,14 @@ module.exports = {
   //   });
   // },
 };
+// cách mới để chuyển từ 1 hàm callback-style -> promise style
+// const redis_hset = promisify(client.hSet).bind(client);
+// const redis_hget = promisify(client.hGet).bind(client);
+// const redis_hincreby = promisify(client.hIncrBy).bind(client);
+// const redis_setnx = promisify(client.setNX).bind(client);
+// const redis_exists = promisify(client.exists).bind(client);
+// const redis_hgetall = promisify(client.hGetAll).bind(client);
+// const redis_increby = promisify(client.incrBy).bind(client);
+// const redis_get = promisify(client.get).bind(client);
+// const redis_set = promisify(client.set).bind(client);
+// const redis_lrange = promisify(client.lRange).bind(client);

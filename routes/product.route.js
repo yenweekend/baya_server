@@ -10,6 +10,12 @@ const uploadCloud = require("../configs/cloudinary.config");
 // );
 router.post("/create-mutiple", ProductController.createProducts);
 router.post("/desc/update", ProductController.updateDescription);
+router.post(
+  "/product-collection/create",
+  ProductController.addProductCollectionRelation
+);
+router.post("/thumbnail/update", ProductController.updateProductsThumbnails);
+
 router.get("/product-detail/:slug", ProductController.getProductDetail);
 
 router.post("/update", ProductController.updateProductCategory);
