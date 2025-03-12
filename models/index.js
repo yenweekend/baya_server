@@ -8,12 +8,9 @@ const Gift = require("./Product/gift");
 const ProductGift = require("./Product/product_gift");
 const Attribute = require("./Product/attribute");
 const AttributeValue = require("./Product/attribute_value");
-const ProductVariant = require("./Product/product_variant");
 const Collection = require("./Product/collection");
 const Review = require("./Product/review");
 const ReviewImage = require("./Product/review_image");
-
-const Inventory = require("./Product/inventory");
 const ProductVariantAttribute = require("./Product/product_variant_attribute");
 const Vendor = require("./Product/vendor");
 const Blog = require("./Blog/blog");
@@ -21,7 +18,17 @@ const BlogDetail = require("./Blog/blog_detail");
 const BlogDetailTag = require("./Blog/blog_detail_tag");
 const Tag = require("./Blog/tag");
 const ProductCollection = require("./Product/product_collection");
+const Order = require("./order");
+const OrderDetail = require("./order_detail");
+const Coupon = require("./coupon");
+const UserCoupon = require("./user_coupon");
+const Address = require("./address");
 module.exports = {
+  Address,
+  Order,
+  OrderDetail,
+  Coupon,
+  UserCoupon,
   ProductCollection,
   Vendor,
   User,
@@ -33,9 +40,7 @@ module.exports = {
   Gift,
   Attribute,
   AttributeValue,
-  ProductVariant,
   ProductGift,
-  Inventory,
   ProductVariantAttribute,
   Blog,
   BlogDetail,

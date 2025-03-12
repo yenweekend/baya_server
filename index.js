@@ -17,7 +17,7 @@ app.use(express.json());
 app.use(
   cors({
     origin: process.env.URL_CLIENT,
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true,
   })
 );
@@ -27,7 +27,7 @@ app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   session({
-    store: new RedisStore({ client: client, ttl: 180 }),
+    store: new RedisStore({ client: client, ttl: 3600 }),
     secret: "kljasgkfhkas",
     resave: false,
     saveUninitialized: false,
@@ -35,7 +35,7 @@ app.use(
     cookie: {
       httpOnly: true,
       secure: false,
-      maxAge: 3600 * 1000 * 3, // cookie last for 3 hours
+      maxAge: 1000 * 3600 * 1, // cookie last for 3 hours
     },
   })
 );
@@ -46,16 +46,7 @@ sequelize.sync();
 const routes = require("./routes");
 
 app.use("/api", routes);
-app.get("/get-session", (req, res) => {
-  res.send(req.session);
-});
-app.get("/set-session", (req, res) => {
-  req.session.user = {
-    name: "yen stick",
-    age: 10,
-  };
-  res.send("set OK");
-});
+
 app.get("/", (req, res) => {
   res.send("Server Baya On");
 });

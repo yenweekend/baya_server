@@ -12,19 +12,9 @@ const Image = sequelize.define(
     },
     product_id: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: "product",
-        key: "id",
-      },
-      onDelete: "CASCADE",
-      onUpdate: "CASCADE",
-    },
-    product_variant_id: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      references: {
-        model: "product_variant",
         key: "id",
       },
       onDelete: "CASCADE",

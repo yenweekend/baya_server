@@ -58,7 +58,7 @@ module.exports = {
         return res.status(404).json({ message: "Blog not found" });
       }
 
-      res.status(201).json({
+      res.status(200).json({
         message: "Get Blog Detail successfully",
         data: blog,
       });
@@ -104,7 +104,7 @@ module.exports = {
       if (!blogDetail) {
         return res.status(404).json({ message: "Blog not found" });
       }
-      res.status(201).json({
+      res.status(200).json({
         message: "Get Blog Detail successfully",
         data: blogDetail,
         relateBlogs: relatedBlogs,
@@ -128,12 +128,26 @@ module.exports = {
         order: [["createdAt", "DESC"]],
         limit: 4,
       });
-      res.status(201).json({
+      res.status(200).json({
         message: "Get Blog Detail successfully",
         data: latestBlogs,
       });
     } catch (error) {
       throw error;
     }
+  }),
+  bulkCreateBlog: asyncHandler(async (req, res, next) => {
+    const blogs = req.body.data;
+    await Blog.bulkCreate(blogs);
+    return res.status(201).json({
+      msg: "Thêm blogs thành công",
+    });
+  }),
+  bulkCreateBlogDetail: asyncHandler(async (req, res, next) => {
+    const blogs = req.body.data;
+    await BlogDetail.bulkCreate(blogs);
+    return res.status(201).json({
+      msg: "Thêm blogs thành công",
+    });
   }),
 };

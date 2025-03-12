@@ -1,17 +1,26 @@
-const { DataTypes, DATE } = require("sequelize");
-const { sequelize } = require("../../configs/postgreConn");
+const { DataTypes } = require("sequelize");
+const { sequelize } = require("../configs/postgreConn");
 const shortid = require("shortid");
-
-const Inventory = sequelize.define(
-  "Inventory",
+const OrderDetail = sequelize.define(
+  "OrderDetail",
   {
     id: {
       type: DataTypes.STRING,
       primaryKey: true,
       defaultValue: shortid.generate,
     },
+    order_id: {
+      type: DataTypes.STRING,
+      references: {
+        model: "order",
+        key: "id",
+      },
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+    },
     product_id: {
       type: DataTypes.STRING,
+      allowNull: true,
       references: {
         model: "product",
         key: "id",
@@ -19,22 +28,20 @@ const Inventory = sequelize.define(
       onDelete: "CASCADE",
       onUpdate: "CASCADE",
     },
-    product_variant_id: {
-      type: DataTypes.STRING,
-      references: {
-        model: "product_variant",
-        key: "id",
-      },
-      onDelete: "CASCADE",
-      onUpdate: "CASCADE",
-    },
     quantity: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.BIGINT,
+    },
+    price_original: {
+      type: DataTypes.DECIMAL(10, 2),
+    },
+    price: {
+      type: DataTypes.DECIMAL(10, 2),
     },
   },
   {
+    tableName: "order_detail",
     timestamps: true,
-    tableName: "inventory",
   }
 );
-module.exports = Inventory;
+
+module.exports = OrderDetail;

@@ -19,15 +19,11 @@ const AttributeValue = sequelize.define(
       onDelete: "CASCADE",
       onUpdate: "CASCADE",
     },
-    title: {
-      type: DataTypes.STRING,
-    },
     value: {
       type: DataTypes.STRING,
     },
     slug: {
       type: DataTypes.STRING,
-      allowNull: false,
     },
   },
   {

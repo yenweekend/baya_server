@@ -4,4 +4,9 @@ const CollectionController = require("../controllers/collection.controller");
 
 router.post("/create", CollectionController.createCollections);
 
+router.get(
+  "/collection-detail/:slug",
+  CollectionController.getPaginatedCollectionProducts
+);
+
 module.exports = router;

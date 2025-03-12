@@ -11,6 +11,16 @@ const Product = sequelize.define(
       primaryKey: true,
       defaultValue: shortid.generate,
     },
+    parent_id: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      references: {
+        model: "product",
+        key: "id",
+      },
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+    },
     title: {
       type: DataTypes.TEXT,
       allowNull: false,
@@ -34,11 +44,16 @@ const Product = sequelize.define(
       type: DataTypes.TEXT,
     },
     single: { type: DataTypes.BOOLEAN, defaultValue: true },
+
+    stock: {
+      type: DataTypes.INTEGER,
+    },
     url: {
       type: DataTypes.STRING,
     },
     vendor_id: {
       type: DataTypes.STRING,
+      allowNull: true,
       references: {
         model: "vendor",
         key: "id",
@@ -46,10 +61,13 @@ const Product = sequelize.define(
       onDelete: "CASCADE",
       onUpdate: "CASCADE",
     },
-
     description: {
       type: DataTypes.TEXT,
       allowNull: true, // Để mô tả có thể không bắt buộc
+    },
+    variant_title: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
   },
   {
@@ -70,7 +88,6 @@ Product.beforeBulkCreate((instances, options) => {
 Product.beforeCreate(async (product, options) => {
   const slugName = slugify(product.title);
   product.price = product.price_original;
-
   product.slug = slugName;
   product.url = `/products/${slugName}`;
   product.sku = shortid.generate(); // SKU format: NAME-XXXXXX

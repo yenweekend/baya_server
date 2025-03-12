@@ -12,7 +12,9 @@ const {
 const {
   getProductCollectionBySlug,
 } = require("../services/collection.service");
-const { Op, where } = require("sequelize");
+const { Op } = require("sequelize");
+const ctrls = require("../services/product.service");
+const productServices = require("../services/product.service");
 const { sequelize } = require("../configs/postgreConn");
 module.exports = {
   getContent: asyncHandler(async (req, res) => {
@@ -40,7 +42,7 @@ module.exports = {
       const allProducts = await Promise.all(
         subcategories.map(async (subcategory) => {
           const products = await subcategory.getProducts({
-            attributes: { exclude: ["vendor_id", "id", "description"] },
+            attributes: { exclude: ["vendor_id", "description"] },
             include: [
               {
                 model: Vendor,
@@ -80,7 +82,7 @@ module.exports = {
       order: [["createdAt", "DESC"]], // Order by createdAt in descending order
       limit: 6, // Limit the results to 6
     });
-    res.status(201).json({
+    res.status(200).json({
       message: "Get Home Content Successfully",
       data: {
         kitchenCollection,
@@ -108,27 +110,25 @@ module.exports = {
     // Dynamically build the ORDER BY clause
     const orderByClause = `p."${sortColumn}" ${direction.toUpperCase()}`;
     const searchKey = req.query.q;
+    let order = [];
+    if (sort) {
+      const [field, direct] = sort.split("_");
+      if (
+        ["price", "title", "createdAt"].includes(field) &&
+        ["asc", "desc"].includes(direct)
+      ) {
+        order.push([field, direct.toUpperCase()]); // Sequelize uses "ASC" or "DESC"
+      }
+    }
     const results = await sequelize.query(
       `
       SELECT 
-        p.url, 
-        p.slug, 
-        p.title, 
-        p.thumbnail, 
-        p."thumbnailM", 
-        p.price, 
-        p.price_original, 
-        COUNT(*) OVER() AS total_count,
-        v.title AS vendor_name,
-        v.url as vendor_url,
-        v.slug as vendor_slug
+        p.id,
+        COUNT(*) OVER() AS total_count
       FROM 
-        product p
-      JOIN 
-        vendor v ON p.vendor_id = v.id
+        product AS p
       WHERE 
         p.product_tsv @@ plainto_tsquery('english', :searchKey)
-      ORDER BY ${orderByClause}
       LIMIT :limit OFFSET :offset
       `,
       {
@@ -136,9 +136,19 @@ module.exports = {
         type: sequelize.QueryTypes.SELECT,
       }
     );
+    const productIds = results.map((row) => {
+      return row.id;
+    });
+    const products = await productServices.findAllProductsWithdIds(
+      productIds,
+      order
+    );
+    const formattedProducts = products.map((product) =>
+      ctrls.extractAttribute(product.toJSON())
+    );
     const count = results.length > 0 ? results[0].total_count : 0;
-    res.status(201).json({
-      rows: results,
+    res.status(200).json({
+      rows: formattedProducts,
       count: parseInt(count),
     });
   }),

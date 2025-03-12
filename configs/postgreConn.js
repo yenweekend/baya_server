@@ -17,6 +17,11 @@ const sequelize = new Sequelize(process.env.DB_URL, {
     collate: "utf8_general_ci",
   },
 });
+// const sequelize = new Sequelize("baya-server", "postgres", "250204", {
+//   host: "127.0.0.1", // Change this if your database is hosted elsewhere
+//   dialect: "postgres",
+//   logging: false, // Disable SQL logging in console (optional)
+// });
 const dbConn = async () => {
   try {
     await sequelize.authenticate();

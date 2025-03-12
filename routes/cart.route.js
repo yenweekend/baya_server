@@ -1,8 +1,18 @@
 const express = require("express");
-const { add, deleteItem } = require("../controllers/cart.controller");
-const { checkSession } = require("../middleware/checkSession");
+const {
+  add,
+  deleteItem,
+  get,
+  update,
+} = require("../controllers/cart.controller");
+const { verifyToken } = require("../middleware/auth");
 const router = express.Router();
 
-router.post("/add", [checkSession], add);
-router.post("/delete/:id", [checkSession], deleteItem);
+router.post("/add", [verifyToken], add);
+router.patch("/update/:productId", [verifyToken], update);
+
+router.get("/cart", [verifyToken], get);
+
+router.delete("/delete/:id", [verifyToken], deleteItem);
+
 module.exports = router;

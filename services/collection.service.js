@@ -9,7 +9,7 @@ module.exports = {
 
     // Fetch the limited products separately
     const products = await collection.getProducts({
-      attributes: { exclude: ["id", "createdAt", "updatedAt"] },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
       include: [
         {
           model: Vendor,

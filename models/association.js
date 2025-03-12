@@ -8,10 +8,8 @@ const {
   Gift,
   Attribute,
   AttributeValue,
-  ProductVariant,
   Vendor,
   ProductGift,
-  Inventory,
   ProductVariantAttribute,
   Blog,
   BlogDetail,
@@ -21,7 +19,113 @@ const {
   ReviewImage,
   Collection,
   ProductCollection,
+  Order,
+  OrderDetail,
+  Coupon,
+  UserCoupon,
+  Address,
 } = require("./index");
+// user - coupon
+User.belongsToMany(Coupon, {
+  as: "coupons",
+  through: UserCoupon,
+  foreignKey: "user_id",
+  otherKey: "coupon_id",
+});
+Coupon.belongsToMany(User, {
+  as: "users",
+  through: UserCoupon,
+  foreignKey: "coupon_id",
+  otherKey: "user_id",
+});
+User.hasMany(UserCoupon, {
+  foreignKey: "user_id",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+UserCoupon.belongsTo(User, {
+  foreignKey: "user_id",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+Coupon.hasMany(UserCoupon, {
+  foreignKey: "coupon_id",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+UserCoupon.belongsTo(Coupon, {
+  foreignKey: "coupon_id",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+//user- address
+User.hasMany(Address, {
+  foreignKey: "user_id",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+Address.belongsTo(User, {
+  foreignKey: "user_id",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+//coupon --- order
+Coupon.hasMany(Order, {
+  foreignKey: "coupon_id",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+Order.belongsTo(Coupon, {
+  foreignKey: "coupon_id",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+//order --- product
+Order.belongsToMany(Product, {
+  as: "products",
+  through: OrderDetail,
+  foreignKey: "order_id",
+  otherKey: "product_id",
+});
+Product.belongsToMany(Order, {
+  as: "orders",
+  through: OrderDetail,
+  foreignKey: "product_id",
+  otherKey: "order_id",
+});
+Product.hasMany(OrderDetail, {
+  foreignKey: "product_id",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+OrderDetail.belongsTo(Product, {
+  foreignKey: "product_id",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+Order.hasMany(OrderDetail, {
+  foreignKey: "order_id",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+OrderDetail.belongsTo(Order, {
+  foreignKey: "order_id",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+// user ---- order
+User.hasMany(Order, {
+  foreignKey: "user_id",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+Order.belongsTo(User, {
+  foreignKey: "user_id",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
 
 Product.belongsToMany(Collection, {
   as: "collections",
@@ -54,6 +158,19 @@ Collection.hasMany(ProductCollection, {
   foreignKey: "collection_id",
   onDelete: "CASCADE",
   onUpdate: "CASCADE",
+});
+// product ----- review
+Product.belongsToMany(User, {
+  as: "reviewers",
+  through: Review,
+  foreignKey: "product_id",
+  otherKey: "user_id",
+});
+User.belongsToMany(Product, {
+  as: "products",
+  through: Review,
+  foreignKey: "user_id",
+  otherKey: "product_id",
 });
 
 Product.hasMany(Review, {
@@ -142,6 +259,16 @@ Category.belongsToMany(Category, {
   foreignKey: "sub_category_id",
   otherKey: "category_id",
 });
+Category.hasMany(CategorySubCategory, {
+  foreignKey: "category_id",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+CategorySubCategory.belongsTo(Category, {
+  foreignKey: "category_id",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
 
 Product.belongsToMany(Category, {
   as: "categories",
@@ -186,16 +313,6 @@ Image.belongsTo(Product, {
   onDelete: "CASCADE",
   onUpdate: "CASCADE",
 });
-ProductVariant.hasMany(Image, {
-  foreignKey: "product_variant_id",
-  onDelete: "CASCADE",
-  onUpdate: "CASCADE",
-});
-Image.belongsTo(ProductVariant, {
-  foreignKey: "product_variant_id",
-  onDelete: "CASCADE",
-  onUpdate: "CASCADE",
-});
 
 Attribute.hasMany(AttributeValue, {
   foreignKey: "attr_id",
@@ -210,24 +327,26 @@ AttributeValue.belongsTo(Attribute, {
 //the Super Many-to-Many relationship
 //https://sequelize.org/docs/v6/advanced-association-concepts/advanced-many-to-many/
 
-Product.hasMany(ProductVariant, {
-  foreignKey: "product_id",
+Product.hasMany(Product, {
+  foreignKey: "parent_id",
+  as: "variants",
   onDelete: "CASCADE",
   onUpdate: "CASCADE",
 });
-ProductVariant.belongsTo(Product, {
-  foreignKey: "product_id",
+Product.belongsTo(Product, {
+  foreignKey: "parent_id",
+  as: "parent",
   onDelete: "CASCADE",
   onUpdate: "CASCADE",
 });
 
-AttributeValue.belongsToMany(ProductVariant, {
+AttributeValue.belongsToMany(Product, {
   as: "productvariants",
   through: ProductVariantAttribute,
   foreignKey: "attr_value_id",
   otherKey: "product_variant_id",
 });
-ProductVariant.belongsToMany(AttributeValue, {
+Product.belongsToMany(AttributeValue, {
   as: "attributevalues",
   through: ProductVariantAttribute,
   foreignKey: "product_variant_id",
@@ -243,23 +362,12 @@ ProductVariantAttribute.belongsTo(AttributeValue, {
   onDelete: "CASCADE",
   onUpdate: "CASCADE",
 });
-ProductVariant.hasMany(ProductVariantAttribute, {
+Product.hasMany(ProductVariantAttribute, {
   foreignKey: "product_variant_id",
   onDelete: "CASCADE",
   onUpdate: "CASCADE",
 });
-ProductVariantAttribute.belongsTo(ProductVariant, {
-  foreignKey: "product_variant_id",
-  onDelete: "CASCADE",
-  onUpdate: "CASCADE",
-});
-
-ProductVariant.hasMany(Inventory, {
-  foreignKey: "product_variant_id",
-  onDelete: "CASCADE",
-  onUpdate: "CASCADE",
-});
-Inventory.belongsTo(ProductVariant, {
+ProductVariantAttribute.belongsTo(Product, {
   foreignKey: "product_variant_id",
   onDelete: "CASCADE",
   onUpdate: "CASCADE",
@@ -309,6 +417,10 @@ Tag.belongsToMany(BlogDetail, {
 });
 
 module.exports = {
+  Coupon,
+  UserCoupon,
+  Order,
+  OrderDetail,
   Blog,
   BlogDetail,
   BlogDetailTag,
@@ -326,8 +438,6 @@ module.exports = {
   ProductGift,
   Attribute,
   AttributeValue,
-  ProductVariant,
-
-  Inventory,
   ProductVariantAttribute,
+  Address,
 };

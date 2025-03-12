@@ -12,7 +12,7 @@ const sendMail = async ({ email, html }) => {
 
   // send mail with defined transport object
   let info = await transporter.sendMail({
-    from: '"BeautyBoxClone" <no-relply@beautyboxclone.com>', // sender address
+    from: '"BayaClone" <no-relply@bayaclone.com>', // sender address
     to: email, // list of receivers
     subject: "Forgot password", // Subject line
     html: html, // html body

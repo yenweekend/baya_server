@@ -1,115 +1,122 @@
-const { Province, District, Ward } = require("../models");
 const {
-  redis_get,
-  redis_set,
-  redis_setnx,
-  redis_exists,
-  redis_increby,
-} = require("../services/redis.service");
-class OrderController {
-  async getProvince(req, res) {
-    try {
-      const province = await Province.findAll();
-      const vl = province?.map((item) => {
-        return {
-          value: item.id,
-          label: item.name,
-          id: 1,
-        };
-      });
-      if (province) {
-        return res.json({
-          success: true,
-          data: vl,
-        });
-      }
-      return res.json({
-        success: false,
-      });
-    } catch (error) {}
-  }
-  async postAddress(req, res) {
-    try {
-      const { id, value } = req.body;
-      if (id == 1) {
-        const district = await District.findAll({
-          where: { province_id: value },
-        });
-        if (district) {
-          const data = district?.map((item) => {
-            return {
-              value: item.id,
-              label: item.name,
-              id: 2,
-            };
-          });
-          return res.json({
-            success: true,
-            data: data,
-            type: 2,
-          });
-        }
-      } else if (id == 2) {
-        const ward = await Ward.findAll({ where: { district_id: value } });
-        if (ward) {
-          const data = ward?.map((item) => {
-            return {
-              value: item.id,
-              label: item.name,
-            };
-          });
-          return res.json({
-            success: true,
-            data: data,
-          });
-        }
-      }
-      return res.json({
-        success: false,
-        message: "Failed get address",
-      });
-    } catch (error) {
-      return res.json({
-        success: false,
-        message: "Failed get address",
-      });
-    }
-  }
-  async order(req, res, next) {
-    try {
-      const sltonkho = 10;
-      const keyName = "iphone16";
-      const { slMua } = req.body;
-      const getKey = await redis_exists(keyName);
-      if (!getKey) {
-        await redis_set(keyName, 0);
-      }
-      let slBanRa = await redis_get(keyName);
-      console.log(
-        "Truoc khi user order thanh cong thi so luong ban ra :",
-        slBanRa
-      );
-      slBanRa = await redis_increby(keyName, slMua);
-      if (slBanRa > sltonkho) {
-        console.log("Out of Stock !");
-        return res.json({
-          status: "fail",
-          msg: "out of stock",
-        });
-      }
-      console.log(
-        "Sau khi user order thanh cong thi so luong ban ra :",
-        slBanRa
-      );
-      return res.json({
-        status: "success",
-        msg: "OK",
-      });
-      // gia su moi lan khach hang order thanh cong thi so luong giam di 1
-    } catch (error) {
-      next(error);
-    }
-  }
-}
+  Order,
+  OrderDetail,
+  User,
+  Product,
+  Coupon,
+  Address,
+} = require("../models/association");
+const asyncHandler = require("express-async-handler");
+const { hexists, hdel } = require("../services/redis.service");
+const { sequelize } = require("../configs/postgreConn");
+const throwError = require("../helpers/throwError");
+const { Op, where } = require("sequelize");
 
-module.exports = new OrderController();
+module.exports = {
+  create: asyncHandler(async (req, res) => {
+    const { address, items, coupon_id, address_code, total_price } =
+      req.body.data;
+    // const { userId } = req;
+    const userId = "WBo50izPh";
+    const transaction = await sequelize.transaction();
+    try {
+      const user = await User.findByPk(userId, { transaction });
+      if (!user) {
+        throwError("Không tìm thấy tài khoản người dùng", 404);
+      }
+      const newOrder = await user.createOrder(
+        {
+          coupon_id: coupon_id,
+          address: address,
+          address_code,
+          total_price: total_price,
+        },
+        { transaction }
+      );
+      await Promise.all(
+        items.map(async (item) => {
+          const product = await Product.findByPk(item.id, { transaction });
+
+          if (!product) {
+            throw new Error(`Product with ID ${item.id} does not exist.`);
+          }
+          await newOrder.addProduct(product, {
+            through: {
+              quantity: item.quantity,
+              price: product.price || product.price_original,
+              price_original: product.price_original,
+            },
+            transaction,
+          });
+          await hdel(`cart:${userId}`, `product:${item.id}`);
+        })
+      );
+      await transaction.commit();
+      return res.status(201).json({
+        msg: "Đã tạo đơn hàng thành công",
+      });
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  }),
+  updateStatus: asyncHandler(async (req, res) => {
+    const { status, orderId } = req.body.data;
+    await Order.update(
+      {
+        status: status,
+      },
+      { where: { id: orderId } }
+    );
+    return res.status(201).json({
+      msg: "Đã cập nhật trạng thái đơn hàng",
+    });
+  }),
+  get: asyncHandler(async (req, res) => {
+    // const { userId } = req;
+    const userId = "WBo50izPh";
+    const user = await User.findByPk(userId);
+    if (!user) {
+      throwError("Không tìm thấy người dùng", 404);
+    }
+
+    const orderDetail = await user.getOrders({
+      include: [
+        {
+          model: OrderDetail,
+          include: {
+            model: Product,
+          },
+        },
+        {
+          model: Coupon,
+        },
+      ],
+    });
+
+    return res.status(200).json({
+      msg: "Lấy dữ liệu đơn mua thành công",
+      data: orderDetail,
+    });
+  }),
+  getPurchaseUserInfo: asyncHandler(async (req, res) => {
+    // const userId = req.userId;
+    const userId = "WBo50izPh";
+
+    const user = await User.findOne({
+      where: {
+        id: userId,
+      },
+      attributes: { exclude: ["refreshToken", "password", "role"] },
+    });
+    const addresses = await user.getAddresses({
+      where: {
+        on_used: true,
+      },
+    });
+    return res.status(200).json({
+      userInfo: user,
+      addresses,
+    });
+  }),
+};

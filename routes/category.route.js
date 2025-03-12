@@ -6,5 +6,6 @@ router.get(
   "/category-detail/:slug",
   CategoryController.getPaginatedCategoryProducts
 );
-
+router.post("/bulk-create", CategoryController.bulkCreate);
+router.post("/assign", CategoryController.create);
 module.exports = router;
