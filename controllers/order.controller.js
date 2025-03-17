@@ -11,11 +11,21 @@ const { hexists, hdel } = require("../services/redis.service");
 const { sequelize } = require("../configs/postgreConn");
 const throwError = require("../helpers/throwError");
 const { Op, where } = require("sequelize");
-
+const isCouponExpired = require("../helpers/isCouponExpired");
+const { query } = require("express");
 module.exports = {
   create: asyncHandler(async (req, res) => {
-    const { address, items, coupon_id, address_code, total_price } =
-      req.body.data;
+    const {
+      address,
+      items,
+      total_price,
+      address_detail,
+      discount_value,
+      original_total_price,
+      coupon_name,
+      discount_type,
+      pay_method,
+    } = req.body;
     // const { userId } = req;
     const userId = "WBo50izPh";
     const transaction = await sequelize.transaction();
@@ -26,10 +36,14 @@ module.exports = {
       }
       const newOrder = await user.createOrder(
         {
-          coupon_id: coupon_id,
+          address_detail,
           address: address,
-          address_code,
           total_price: total_price,
+          discount_value,
+          original_total_price,
+          coupon_name,
+          discount_type,
+          pay_method,
         },
         { transaction }
       );
@@ -38,6 +52,7 @@ module.exports = {
           const product = await Product.findByPk(item.id, { transaction });
 
           if (!product) {
+            await transaction.rollback();
             throw new Error(`Product with ID ${item.id} does not exist.`);
           }
           await newOrder.addProduct(product, {
@@ -51,9 +66,18 @@ module.exports = {
           await hdel(`cart:${userId}`, `product:${item.id}`);
         })
       );
+      const coupon = await Coupon.findOne({
+        where: {
+          code: coupon_name,
+        },
+      });
+      if (coupon) {
+        await user.addCoupon(coupon);
+      }
       await transaction.commit();
       return res.status(201).json({
         msg: "Đã tạo đơn hàng thành công",
+        productPurchasedId: items.map((item) => item.id),
       });
     } catch (error) {
       await transaction.rollback();
@@ -88,9 +112,6 @@ module.exports = {
             model: Product,
           },
         },
-        {
-          model: Coupon,
-        },
       ],
     });
 
@@ -102,21 +123,50 @@ module.exports = {
   getPurchaseUserInfo: asyncHandler(async (req, res) => {
     // const userId = req.userId;
     const userId = "WBo50izPh";
-
     const user = await User.findOne({
       where: {
         id: userId,
       },
       attributes: { exclude: ["refreshToken", "password", "role"] },
     });
-    const addresses = await user.getAddresses({
-      where: {
-        on_used: true,
-      },
-    });
+    const addresses = await user.getAddresses();
     return res.status(200).json({
       userInfo: user,
       addresses,
+    });
+  }),
+  applyCoupon: asyncHandler(async (req, res) => {
+    // const userId = req.userId;
+    const userId = "WBo50izPh";
+    const user = await User.findOne({
+      where: {
+        id: userId,
+      },
+      attributes: { exclude: ["refreshToken", "password", "role"] },
+    });
+    const { code, total } = req.query;
+    console.log(req.query);
+    const coupon = await Coupon.findOne({
+      where: {
+        code: code,
+        condition: {
+          [Op.lte]: parseInt(total),
+        },
+      },
+    });
+    if (!coupon) {
+      return res.status(404).json({
+        msg: "Mã đã hết hạn hoặc bạn không đạt đủ điều kiện của voucher  ",
+      });
+    }
+    const isExpired = isCouponExpired(coupon.expire_date);
+    if ((await user.hasCoupon(coupon)) || isExpired) {
+      return res.status(400).json({
+        msg: "Mã không còn khả dụng",
+      });
+    }
+    return res.status(200).json({
+      coupon: coupon,
     });
   }),
 };

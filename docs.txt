@@ -1,2 +1,0 @@
-# DB_URL=postgresql://yendevbn:8vUuJyNW5xOgPKCXgbgbBQg1AflFzRbM@dpg-cuicrd9u0jms739dqjh0-a.singapore-postgres.render.com/baya
-# DB_URL=postgresql://baya_owner:npg_3xwpMdRD0vqQ@ep-sparkling-surf-a5w2ufki-pooler.us-east-2.aws.neon.tech/baya?sslmode=require

@@ -69,17 +69,6 @@ Address.belongsTo(User, {
   onDelete: "CASCADE",
   onUpdate: "CASCADE",
 });
-//coupon --- order
-Coupon.hasMany(Order, {
-  foreignKey: "coupon_id",
-  onDelete: "CASCADE",
-  onUpdate: "CASCADE",
-});
-Order.belongsTo(Coupon, {
-  foreignKey: "coupon_id",
-  onDelete: "CASCADE",
-  onUpdate: "CASCADE",
-});
 
 //order --- product
 Order.belongsToMany(Product, {

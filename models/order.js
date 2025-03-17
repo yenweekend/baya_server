@@ -14,8 +14,8 @@ const Order = sequelize.define(
       type: DataTypes.ENUM("pending", "success", "refuse"),
       defaultValue: "pending",
     },
-    address_code: {
-      type: DataTypes.STRING, // 01-004-007
+    pay_method: {
+      type: DataTypes.STRING,
     },
     address: {
       type: DataTypes.TEXT,
@@ -33,18 +33,20 @@ const Order = sequelize.define(
       onDelete: "CASCADE",
       onUpdate: "CASCADE",
     },
-    coupon_id: {
-      type: DataTypes.STRING,
-      allowNull: true,
-      references: {
-        model: "coupon",
-        key: "id",
-      },
-      onDelete: "CASCADE",
-      onUpdate: "CASCADE",
-    },
     total_price: {
       type: DataTypes.DECIMAL(10, 2),
+    },
+    original_total_price: {
+      type: DataTypes.DECIMAL(10, 2),
+    },
+    discount_type: {
+      type: DataTypes.ENUM("percent", "fixed"),
+    },
+    discount_value: {
+      type: DataTypes.BIGINT,
+    },
+    coupon_name: {
+      type: DataTypes.STRING,
     },
   },
   {
