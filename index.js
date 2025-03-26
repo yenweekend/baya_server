@@ -8,15 +8,17 @@ const bodyParser = require("body-parser");
 const { dbConn } = require("./configs/postgreConn");
 
 const app = express();
-// const rejson = require("redis-rejson");
-
+const FRONTEND_URL =
+  process.env.NODE_ENV === "production"
+    ? process.env.URL_CLIENT
+    : "http://localhost:3001";
 const session = require("express-session");
 const RedisStore = require("connect-redis").default;
 const client = require("./databases/init.redis");
 app.use(express.json());
 app.use(
   cors({
-    origin: process.env.URL_CLIENT,
+    origin: FRONTEND_URL,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true,
   })
@@ -28,7 +30,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(
   session({
     store: new RedisStore({ client: client, ttl: 3600 }),
-    secret: "kljasgkfhkas",
+    secret: process.env.REDIS_SECRET_KEY,
     resave: false,
     saveUninitialized: false,
     rolling: true,
