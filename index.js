@@ -12,13 +12,21 @@ const FRONTEND_URL =
   process.env.NODE_ENV === "production"
     ? process.env.URL_CLIENT
     : "http://localhost:5173";
+const allowedOrigins = ["http://localhost:5173", process.env.URL_CLIENT];
 const session = require("express-session");
 const RedisStore = require("connect-redis").default;
 const client = require("./databases/init.redis");
 app.use(express.json());
 app.use(
   cors({
-    origin: FRONTEND_URL,
+    // origin: FRONTEND_URL,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true,
   })
