@@ -11,7 +11,7 @@ const app = express();
 const FRONTEND_URL =
   process.env.NODE_ENV === "production"
     ? process.env.URL_CLIENT
-    : "http://localhost:5173/";
+    : "http://localhost:5173";
 const session = require("express-session");
 const RedisStore = require("connect-redis").default;
 const client = require("./databases/init.redis");
