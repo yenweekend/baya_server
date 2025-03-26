@@ -5,6 +5,8 @@ const jwt = require("jsonwebtoken");
 const { sendMail } = require("../configs/sendEmail");
 const { Op } = require("@sequelize/core");
 const throwError = require("../helpers/throwError");
+require("dotenv").config();
+
 module.exports = {
   signUp: asyncHanlder(async (req, res) => {
     const { firstName, lastName, email, password } = req.body;
@@ -67,13 +69,15 @@ module.exports = {
       res.cookie("accessToken", accessToken, {
         httpOnly: true,
         maxAge: 60 * 1000, // 1 minutes,
-        sameSite: "strict", // optionally helps prevent CSRF
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
+
         secure: process.env.NODE_ENV === "production",
       });
       res.cookie("refreshToken", newRefreshToken, {
         httpOnly: true,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days,
-        sameSite: "strict", // optionally helps prevent CSRF
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
+
         secure: process.env.NODE_ENV === "production",
       });
       return res.status(200).json({
@@ -143,7 +147,8 @@ module.exports = {
       res.cookie("accessToken", newAccessToken, {
         httpOnly: true,
         maxAge: 60 * 1000, // 1 minutes,
-        sameSite: "strict", // optionally helps prevent CSRF
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
+
         secure: process.env.NODE_ENV === "production",
       });
       return res.status(200).json({
