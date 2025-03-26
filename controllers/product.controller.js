@@ -7,144 +7,170 @@ const {
   Category,
   Collection,
   ProductVariantAttribute,
+  ReviewImage,
+  Review,
+  User,
 } = require("../models/association");
-const { Op } = require("sequelize");
+const cloudinary = require("cloudinary").v2;
+
+const { Op, Sequelize } = require("sequelize");
 const { sequelize } = require("../configs/postgreConn");
 const asyncHandler = require("express-async-handler");
 const ctrls = require("../services/product.service");
-
+const throwError = require("../helpers/throwError");
+const {
+  attribute,
+} = require("@sequelize/core/_non-semver-use-at-your-own-risk_/expression-builders/attribute.js");
 module.exports = {
-  getProductDetail: asyncHandler(async (req, res, next) => {
-    try {
-      const slug = req.params.slug;
-      const productDetail = await Product.findOne({
-        where: { slug: slug },
+  getProductDetail: asyncHandler(async (req, res) => {
+    const slug = req.params.slug;
+    const productDetail = await Product.findOne({
+      where: { slug: slug },
+      include: [
+        {
+          model: Vendor,
+        },
+      ],
+    });
+    if (!productDetail) {
+      return res.status(404).json({ msg: "Không tìm thấy sản phẩm" });
+    }
+    let productRelevant = [];
+    const categories = await productDetail.getCategories();
+    if (categories.length > 0) {
+      const categoryId = categories[0].id;
+      productRelevant = await Product.findAll({
+        attributes: { exclude: ["vendor_id", "description"] },
+        where: {
+          id: {
+            [Op.ne]: productDetail.id, //exclude current product
+          },
+        },
         include: [
           {
             model: Vendor,
+            attributes: ["title", "url", "slug"],
+            required: false,
+          },
+          {
+            as: "categories",
+            model: Category,
+            where: { id: categoryId }, // Filter by category and subcategories
+            through: { attributes: [] }, // Exclude junction table attributes
+          },
+          {
+            model: Product,
+            as: "variants",
+            include: [
+              {
+                as: "attributevalues",
+                model: AttributeValue,
+                through: { attributes: [] }, // Exclude join table attributes
+                include: {
+                  model: Attribute,
+                },
+              },
+              {
+                model: Image,
+              },
+            ],
+          },
+        ],
+        limit: 10,
+      });
+      productRelevant = productRelevant.map((product) => {
+        return ctrls.extractAttribute(product.toJSON());
+      });
+    }
+    if (!productDetail.single) {
+      const variants = await productDetail.getVariants({
+        attributes: {
+          exclude: ["product_id"],
+        },
+        include: [
+          {
+            as: "attributevalues",
+            model: AttributeValue,
+            through: { attributes: [] }, // Exclude join table attributes
+            include: {
+              model: Attribute,
+            },
+          },
+          {
+            model: Image,
           },
         ],
       });
-      if (!productDetail) {
-        return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
-      }
-      let productRelevant = [];
-      const categories = await productDetail.getCategories();
-      if (categories.length > 0) {
-        const categoryId = categories[0].id;
-        productRelevant = await Product.findAll({
-          attributes: { exclude: ["vendor_id", "description"] },
-          where: {
-            id: {
-              [Op.ne]: productDetail.id, //exclude current product
-            },
-          },
-          include: [
-            {
-              model: Vendor,
-              attributes: ["title", "url", "slug"],
-              required: false,
-            },
-            {
-              as: "categories",
-              model: Category,
-              where: { id: categoryId }, // Filter by category and subcategories
-              through: { attributes: [] }, // Exclude junction table attributes
-            },
-            {
-              model: Product,
-              as: "variants",
-              include: [
-                {
-                  as: "attributevalues",
-                  model: AttributeValue,
-                  through: { attributes: [] }, // Exclude join table attributes
-                  include: {
-                    model: Attribute,
-                  },
-                },
-                {
-                  model: Image,
-                },
-              ],
-            },
-          ],
-          limit: 10,
+      const formattedVariants = variants.map((variant) => {
+        const { attributevalues, ...plainVariant } = variant.toJSON(); // Convert before spreading
+        return {
+          ...plainVariant,
+          attributes: attributevalues.reduce((acc, attr) => {
+            acc[attr.Attribute.name] = attr.value;
+            return acc;
+          }, {}), // => {"Màu sắc": "đỏ", size: "xl", sex: "male"}
+        };
+      });
+      // ✅ Extract attributes into a structured format
+      const attributesMap = {};
+      formattedVariants.forEach((variant) => {
+        Object.entries(variant.attributes).map(([key, value]) => {
+          if (!attributesMap[key]) {
+            attributesMap[key] = new Set();
+          }
+          attributesMap[key].add(value);
         });
-        productRelevant = productRelevant.map((product) => {
-          return ctrls.extractAttribute(product.toJSON());
-        });
-      }
-      if (!productDetail.single) {
-        const variants = await productDetail.getVariants({
-          attributes: {
-            exclude: ["product_id"],
-          },
-          include: [
-            {
-              as: "attributevalues",
-              model: AttributeValue,
-              through: { attributes: [] }, // Exclude join table attributes
-              include: {
-                model: Attribute,
-              },
-            },
-            {
-              model: Image,
-            },
-          ],
-        });
-        const formattedVariants = variants.map((variant) => {
-          const { attributevalues, ...plainVariant } = variant.toJSON(); // Convert before spreading
-          return {
-            ...plainVariant,
-            attributes: attributevalues.reduce((acc, attr) => {
-              acc[attr.Attribute.name] = attr.value;
-              return acc;
-            }, {}), // => {"Màu sắc": "đỏ", size: "xl", sex: "male"}
-          };
-        });
-        // ✅ Extract attributes into a structured format
-        const attributesMap = {};
-        formattedVariants.forEach((variant) => {
-          Object.entries(variant.attributes).map(([key, value]) => {
-            if (!attributesMap[key]) {
-              attributesMap[key] = new Set();
-            }
-            attributesMap[key].add(value);
-          });
-        });
-        // ✅ Convert Set to an array
-        const finalAttributes = Object.fromEntries(
-          Object.entries(attributesMap).map(([key, value]) => [key, [...value]])
-        );
-        return res.status(200).json({
-          message: "Get product detail successfully",
-          productDetail,
-          variants: formattedVariants,
-          attributes: finalAttributes,
-          productRelevant: productRelevant,
-        });
-      }
-      res.status(201).json({
-        message: "Get product detail successfully",
+      });
+      // ✅ Convert Set to an array
+      const finalAttributes = Object.fromEntries(
+        Object.entries(attributesMap).map(([key, value]) => [key, [...value]])
+      );
+      return res.status(200).json({
+        msg: "Get product detail successfully",
         productDetail,
+        variants: formattedVariants,
+        attributes: finalAttributes,
         productRelevant: productRelevant,
       });
-    } catch (error) {
-      next(error); // Passes error to error-handling middleware
     }
+    const feedbacks = await productDetail.getReviews({
+      include: [
+        {
+          model: User,
+          attributes: ["firstName", "lastName"],
+        },
+        {
+          model: ReviewImage,
+          attributes: ["id", "img_url"],
+        },
+      ],
+    });
+    res.status(201).json({
+      msg: "Get product detail successfully",
+      productDetail,
+      productRelevant: productRelevant,
+      feedback: feedbacks,
+    });
   }),
   getViewedProducts: asyncHandler(async (req, res) => {
     const slugs = req.query.slugs;
-    let viewdProducts = slugs.split(",").filter(Boolean);
-
+    let viewedProducts = slugs.split(",").filter(Boolean);
     const products = await Product.findAll({
       where: {
         slug: {
-          [Op.in]: viewdProducts,
+          [Op.in]: viewedProducts,
         },
       },
+      order: [
+        [
+          Sequelize.literal(
+            `array_position(array[${viewedProducts
+              .map((slug) => `'${slug}'`)
+              .join(",")}], "Product"."slug")`
+          ),
+          "ASC",
+        ],
+      ],
       include: [
         {
           model: Vendor,
@@ -238,7 +264,7 @@ module.exports = {
       }
     }
     // Send response after processing all products
-    res.status(201).json({ message: "Products processed successfully" });
+    res.status(201).json({ msg: "Products processed successfully" });
   }),
   addVariants: asyncHandler(async (req, res, next) => {
     const { parent_id, variant, attributes } = req.body.data;
@@ -252,7 +278,7 @@ module.exports = {
     const { title } = product;
     if (!product) {
       return res.status(404).json({
-        message: "không tìm thấy sản phẩm",
+        msg: "không tìm thấy sản phẩm",
       });
     }
     console.log({ variant_title, price_original, stock, title });
@@ -270,7 +296,7 @@ module.exports = {
       await ProductVariantAttribute.bulkCreate(attributeEntries);
     }
     return res.status(201).json({
-      message: "Thêm biến thể cho sản phẩm thành công",
+      msg: "Thêm biến thể cho sản phẩm thành công",
     });
   }),
   assignVariant: asyncHandler(async (req, res, next) => {
@@ -284,7 +310,7 @@ module.exports = {
       await ProductVariantAttribute.bulkCreate(attributeEntries);
     }
     return res.status(201).json({
-      message: "Thêm biến thể cho sản phẩm thành công",
+      msg: "Thêm biến thể cho sản phẩm thành công",
     });
   }),
 
@@ -297,7 +323,7 @@ module.exports = {
           { where: { title: product.title } }
         );
       }
-      res.status(201).json({ message: "Update product detail successfully" });
+      res.status(201).json({ msg: "Update product detail successfully" });
     } catch (error) {
       next(error);
     }
@@ -309,7 +335,7 @@ module.exports = {
       if (!Array.isArray(productsToUpdate) || productsToUpdate.length === 0) {
         return res
           .status(400)
-          .json({ message: "Không có dữ liệu sản phẩm để cập nhật" });
+          .json({ msg: "Không có dữ liệu sản phẩm để cập nhật" });
       }
 
       for (const item of productsToUpdate) {
@@ -337,69 +363,72 @@ module.exports = {
       }
       res
         .status(200)
-        .json({ message: "Cập nhật quan hệ sản phẩm - danh mục thành công" });
+        .json({ msg: "Cập nhật quan hệ sản phẩm - danh mục thành công" });
     } catch (error) {
       next(error);
     }
   }),
-  addProductCollectionRelation: asyncHandler(async (req, res, next) => {
-    try {
-      const products = req.body.products;
-
-      for (const product of products) {
-        try {
-          let vendor = null;
-          // Chỉ tìm hoặc tạo Vendor nếu có brandTitle
-          if (product.brandTitle) {
-            [vendor] = await Vendor.findOrCreate({
-              where: { title: product.brandTitle },
-            });
-          }
-          let [collection] = await Collection.findOrCreate({
-            where: { slug: product.slug },
+  addProductCollectionRelation: asyncHandler(async (req, res) => {
+    const products = req.body.products;
+    for (const product of products) {
+      try {
+        let vendor = null;
+        // Chỉ tìm hoặc tạo Vendor nếu có brandTitle
+        if (product.brandTitle) {
+          [vendor] = await Vendor.findOrCreate({
+            where: { title: product.brandTitle },
           });
-          // Extract thumbnails
-          const thumbnail = product.thumbnails[0] || null;
-          const thumbnailM = product.thumbnails[1] || null;
+        }
+        let [collection, created] = await Collection.findOrCreate({
+          where: { slug: product.slug },
+          defaults: {
+            title: product.collectionTitle,
+          },
+        });
+        // Extract thumbnails
+        const thumbnail = product.thumbnails[0] || null;
+        const thumbnailM = product.thumbnails[1] || null;
 
-          // Use association method `createProduct()` to create a product
-          let newProduct;
-          if (vendor) {
-            const existingProduct = await Product.findOne({
-              where: {
-                title: product.title,
-                vendor_id: vendor.id,
-              },
-            });
-            if (!existingProduct) {
-              newProduct = await vendor.createProduct({
-                title: product.title,
-                price_original: product.price_original,
-                thumbnail,
-                thumbnailM,
-              });
-            } else {
-              newProduct = existingProduct;
-            }
-          } else {
-            // Nếu không có vendor, tạo sản phẩm trực tiếp
-            newProduct = await Product.create({
+        // Use association method `createProduct()` to create a product
+        let newProduct;
+        if (vendor) {
+          const existingProduct = await Product.findOne({
+            where: {
+              title: product.title,
+              vendor_id: vendor.id,
+            },
+          });
+          if (!existingProduct) {
+            newProduct = await vendor.createProduct({
               title: product.title,
               price_original: product.price_original,
               thumbnail,
               thumbnailM,
             });
+          } else {
+            newProduct = existingProduct;
           }
-          await collection.addProduct(newProduct);
-        } catch (error) {
-          console.error(`Error creating product: ${product.title}`, error);
+        } else {
+          // Nếu không có vendor, tạo sản phẩm trực tiếp
+          [newProduct] = await Product.findOrCreate({
+            where: {
+              title: product.title,
+            },
+            defaults: {
+              title: product.title,
+              price_original: product.price_original,
+              thumbnail,
+              thumbnailM,
+            },
+          });
         }
+        await collection.addProduct(newProduct);
+      } catch (error) {
+        console.error(`Error creating product: ${product.title}`, error);
       }
-      // Send response after processing all products
-      res.status(201).json({ message: "Products processed successfully" });
-    } catch (error) {
-      next(error); // Passes error to error-handling middleware
     }
+    // Send response after processing all products
+    res.status(201).json({ msg: "Products processed successfully" });
   }),
   updateProductsThumbnails: asyncHandler(async (req, res, next) => {
     try {
@@ -430,7 +459,7 @@ module.exports = {
         }
       }
 
-      res.status(201).json({ message: "Products processed successfully" });
+      res.status(201).json({ msg: "Products processed successfully" });
     } catch (error) {
       next(error); // Passes error to error-handling middleware
     }
@@ -445,7 +474,7 @@ module.exports = {
     });
     if (!productVariant) {
       return res.status(404).json({
-        message: "Sản phẩm không tồn tại",
+        msg: "Sản phẩm không tồn tại",
       });
     }
     for (const img of images) {
@@ -456,7 +485,112 @@ module.exports = {
       }
     }
     return res.status(201).json({
-      message: "Thêm ảnh cho sản phẩm thành công",
+      msg: "Thêm ảnh cho sản phẩm thành công",
     });
+  }),
+  createProductFromCollection: asyncHandler(async (req, res, next) => {
+    const products = req.body.products;
+    for (const product of products) {
+      try {
+        let vendor = null;
+        // Chỉ tìm hoặc tạo Vendor nếu có brandTitle
+        if (product.brandTitle) {
+          [vendor] = await Vendor.findOrCreate({
+            where: { title: product.brandTitle },
+          });
+        }
+        let collection = await Collection.findOne({
+          where: { slug: product.slug },
+        });
+        const existingProduct = await Product.findOne({
+          where: {
+            title: product.title,
+          },
+        });
+        if (existingProduct) {
+          const productBelongedToCollection = await collection.hasProduct(
+            existingProduct
+          );
+          if (vendor) {
+            await existingProduct.setVendor(vendor);
+          }
+          if (!productBelongedToCollection) {
+            await collection.addProduct(existingProduct);
+          }
+        } else {
+          // Extract thumbnails
+          const thumbnail = product.thumbnails[0] || null;
+          const thumbnailM = product.thumbnails[1] || null;
+
+          // Use association method `createProduct()` to create a product
+          let newProduct;
+          if (vendor) {
+            // Nếu có vendor, tạo sản phẩm với vendor
+            newProduct = await vendor.createProduct({
+              title: product.title,
+              price_original: product.price_original,
+              thumbnail,
+              thumbnailM,
+            });
+          } else {
+            // Nếu không có vendor, tạo sản phẩm trực tiếp
+            newProduct = await Product.create({
+              title: product.title,
+              price_original: product.price_original,
+              thumbnail,
+              thumbnailM,
+            });
+          }
+          await collection.addProduct(newProduct);
+        }
+      } catch (error) {
+        console.error(`Error creating product: ${product.title}`, error);
+      }
+    }
+    // Send response after processing all products
+    res.status(201).json({ msg: "Products processed successfully" });
+  }),
+  handleFeedBack: asyncHandler(async (req, res) => {
+    const userId = req.userId;
+    const { rating, feedback, productId } = req.body;
+    const transaction = await sequelize.transaction();
+    const uploadedImages = req.files.map((file) => file.path);
+
+    try {
+      const user = await User.findByPk(userId, { transaction });
+      if (!user) {
+        throwError("Không tìm thấy tài khoản người dùng", 404);
+      }
+      const product = await Product.findByPk(productId, { transaction });
+      if (!product) {
+        throwError("Product not found", 404);
+      }
+      if (await user.hasProduct(product)) {
+        throwError("You have given feedback to this product", 400);
+      }
+      const review = await user.createReview({
+        rate: rating,
+        comment: feedback,
+      });
+      await review.setProduct(product);
+      await Promise.all(
+        uploadedImages.map(async (item) => {
+          await review.createReviewImage({ img_url: item }, { transaction });
+        })
+      );
+      await transaction.commit();
+      return res.status(201).json({
+        msg: "Gave feedback successfully",
+      });
+    } catch (error) {
+      await Promise.all(
+        uploadedImages.map(async (imageUrl) => {
+          const publicId = imageUrl.split("/").pop().split(".")[0]; // Extract public ID
+          await cloudinary.uploader.destroy(publicId);
+        })
+      );
+      await transaction.rollback();
+      throw error;
+    }
   }),
 };

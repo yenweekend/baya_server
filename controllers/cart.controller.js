@@ -14,7 +14,7 @@ const throwError = require("../helpers/throwError");
 const asyncHandler = require("express-async-handler");
 const { Product } = require("../models/association");
 const { sequelize } = require("../configs/postgreConn");
-const { Op } = require("sequelize");
+const { Op, Sequelize } = require("sequelize");
 module.exports = {
   add: asyncHandler(async (req, res) => {
     const { id: productId, payload: payload } = req.body;
@@ -50,13 +50,22 @@ module.exports = {
     const productIds = Object.keys(existingProducts).map((key) =>
       key.replace("product:", "")
     );
-
     const product = await Product.findAll({
       where: {
         id: {
           [Op.in]: productIds,
         },
       },
+      order: [
+        [
+          Sequelize.literal(
+            `array_position(array[${productIds
+              .map((id) => `'${id}'`)
+              .join(",")}], "Product"."id")`
+          ),
+          "DESC",
+        ],
+      ],
     });
     const products = [...product];
     const data = products.map((p) => {
@@ -103,13 +112,13 @@ module.exports = {
 
     if (exists === 0) {
       return res.status(404).json({
-        message: "Sản phẩm không tồn tại trong giỏ hàng",
+        msg: "Sản phẩm không tồn tại trong giỏ hàng",
       });
     }
     let quantityInCart = await hget(`cart:${userId}`, `product:${productId}`);
     quantityInCart = parseInt(quantityInCart);
     if (quantity === quantityInCart) {
-      return res.json({ message: "Không có thay đổi trong số lượng" });
+      return res.json({ msg: "Không có thay đổi trong số lượng" });
     }
     const product = await Product.findOne({
       where: {
@@ -119,20 +128,20 @@ module.exports = {
 
     if (!product) {
       return res.status(404).json({
-        message: "Sản phẩm không tồn tại ",
+        msg: "Sản phẩm không tồn tại ",
       });
     }
     const stock = product.stock;
     if (quantity <= 0) {
       return res.status(400).json({
-        message: "Số lượng phải lớn hơn 0",
+        msg: "Số lượng phải lớn hơn 0",
       });
     }
     const increase = quantity - quantityInCart;
     const newStock = stock - increase;
     if (newStock < 0) {
       return res.status(409).json({
-        message: "Không đủ sản phẩm",
+        msg: "Không đủ sản phẩm",
       });
     }
     await sequelize.transaction(async (t) => {

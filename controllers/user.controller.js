@@ -10,9 +10,7 @@ module.exports = {
     const { firstName, lastName, email, password } = req.body;
     const alreadyAccount = await User.findOne({ where: { email: email } });
     if (alreadyAccount) {
-      const error = new Error(`Email ${email} đã được người khác sử dụng`);
-      error.status = 409;
-      throw error;
+      throwError(`Email ${email} đã được người khác sử dụng`, 409);
     }
     const newUser = await User.create({
       firstName,
@@ -21,12 +19,10 @@ module.exports = {
       password,
     });
     if (!newUser) {
-      const error = new Error("Tạo tài khoản thất bại");
-      error.status = 400;
-      throw error;
+      throwError(`Tạo tài khoản thất bại`, 400);
     }
     return res.status(201).json({
-      message: "Tạo tài khoản thành công",
+      msg: "Tạo tài khoản thành công",
     });
   }),
   login: asyncHanlder(async (req, res) => {
@@ -82,7 +78,7 @@ module.exports = {
       });
       return res.status(200).json({
         account: userData, // Only non-sensitive fields
-        message: "Welcome to Baya",
+        msg: "Welcome to Baya",
       });
     } catch (error) {
       throw new Error(error);
@@ -91,7 +87,7 @@ module.exports = {
   logout: asyncHanlder(async (req, res) => {
     const cookie = req.cookies;
     if (!cookie && !cookie.refreshToken) {
-      throw new Error("Khong tim thay refresh token trong cookies");
+      throw new Error("RefreshToken not found");
     }
     await User.update(
       {
@@ -111,26 +107,16 @@ module.exports = {
       httpOnly: true,
       secure: true,
     });
-    return res.json({
-      success: true,
-      message: "log out is done !",
+    return res.status(201).json({
+      msg: "You have been logged out!",
     });
   }),
-  verify: asyncHanlder(async (req, res) => {
-    const user = await User.findOne({
-      where: { id: req.userId },
-      attributes: ["firstName", "lastName"],
-    });
-    if (!user) throw new Error("Không tìm thấy người dùng");
-    return res.json({
-      account: user,
-    });
-  }),
+
   refreshAccessToken: asyncHanlder(async (req, res) => {
     const cookie = req.cookies;
     if (!cookie || !cookie.refreshToken) {
       return res.status(404).json({
-        message: "Phiên đã hết hạn hãy đăng nhập lại",
+        msg: "Phiên đã hết hạn hãy đăng nhập lại",
       });
     }
     const result = jwt.verify(
@@ -161,11 +147,11 @@ module.exports = {
         secure: process.env.NODE_ENV === "production",
       });
       return res.status(200).json({
-        message: "Tao moi access token thanh cong !",
+        msg: "Tao moi access token thanh cong !",
       });
     }
     return res.status(404).json({
-      message: "Không tìm thấy người dùng",
+      msg: "Không tìm thấy người dùng",
     });
   }),
   forgotPassword: asyncHanlder(async (req, res) => {
@@ -238,6 +224,7 @@ module.exports = {
     let userId = null;
     const token = req.cookies.accessToken;
     if (!token) {
+      // access token is null
       if (req.cookies.refreshToken) {
         res.clearCookie("refreshToken", {
           httpOnly: true,
@@ -246,10 +233,11 @@ module.exports = {
       }
       return res.status(200).json({
         account: null,
-        message: "Failed to authenticate",
+        msg: "Failed to authenticate",
       });
     }
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+      // access token is made up or expired
       if (err) {
         if (req.cookies.refreshToken) {
           res.clearCookie("refreshToken", {
@@ -259,7 +247,7 @@ module.exports = {
         }
         return res.status(403).json({
           account: null,
-          message: "Forbidden in checkAuth",
+          msg: "Forbidden",
         });
       }
       userId = user.userId;
@@ -275,10 +263,19 @@ module.exports = {
         account: user,
       });
     }
-
     return res.status(200).json({
       account: null,
-      message: "Failed to authencicate",
+      msg: "Failed to authencicate",
+    });
+  }),
+  verify: asyncHanlder(async (req, res) => {
+    const user = await User.findOne({
+      where: { id: req.userId },
+      attributes: ["firstName", "lastName"],
+    });
+    if (!user) throwError("Account not found!", 404);
+    return res.status(200).json({
+      account: user,
     });
   }),
 };

@@ -1,6 +1,6 @@
 const { Collection, Product, Vendor } = require("../models/association");
 module.exports = {
-  getProductCollectionBySlug: async (slug) => {
+  getProductCollectionBySlug: async (slug, limit = 8) => {
     const collection = await Collection.findOne({
       where: { slug: slug },
       attributes: { exclude: ["createdAt", "updatedAt"] },
@@ -17,7 +17,7 @@ module.exports = {
         },
       ],
       through: { attributes: [] }, // Exclude join table attributes
-      limit: 8, // Limit products to 8
+      limit: limit, // Limit products to 8
     });
     return {
       ...collection.toJSON(),

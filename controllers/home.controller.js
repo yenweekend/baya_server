@@ -8,6 +8,7 @@ const {
   Product,
   Vendor,
   Category,
+  Coupon,
 } = require("../models/association");
 const {
   getProductCollectionBySlug,
@@ -20,7 +21,10 @@ module.exports = {
   getContent: asyncHandler(async (req, res) => {
     const kitchenCollection = await getProductCollectionBySlug("yeu-bep");
     const schoolCollection = await getProductCollectionBySlug("back-to-school");
-    const latestCollection = await getProductCollectionBySlug("san-pham-moi");
+    const latestCollection = await getProductCollectionBySlug(
+      "san-pham-moi",
+      10
+    );
     const sofaCategory = await Category.findOne({
       where: {
         slug: "sofa",
@@ -34,7 +38,7 @@ module.exports = {
       },
     });
     if (!showerCategory) {
-      return res.status(404).json({ message: "Không tìm thấy danh mục" });
+      return res.status(404).json({ msg: "Không tìm thấy danh mục" });
     }
     const subcategories = await showerCategory.getSubCategories();
     let showerProducts = null;
@@ -82,8 +86,15 @@ module.exports = {
       order: [["createdAt", "DESC"]], // Order by createdAt in descending order
       limit: 6, // Limit the results to 6
     });
+    const coupons = await Coupon.findAll({
+      where: {
+        expire_date: {
+          [Op.gte]: new Date(), // Get coupons where expire_date is greater than or equal to the current date
+        },
+      },
+    });
     res.status(200).json({
-      message: "Get Home Content Successfully",
+      msg: "Get Home Content Successfully",
       data: {
         kitchenCollection,
         schoolCollection,
@@ -91,6 +102,7 @@ module.exports = {
         sofaProducts: sofaProducts,
         showerProducts: showerProducts,
         blogs: blogs,
+        coupons: coupons,
       },
     });
   }),

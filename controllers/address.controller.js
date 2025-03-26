@@ -72,7 +72,7 @@ module.exports = {
     if (Object.keys(updateData).length === 0) {
       return res
         .status(400)
-        .json({ message: "Không có dữ liệu cho update địa chỉ" });
+        .json({ msg: "Không có dữ liệu cho update địa chỉ" });
     }
     await address.update(updateData);
     res.json({ msg: "Cập nhật địa chỉ thành công", address });

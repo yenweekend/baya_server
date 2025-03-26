@@ -429,4 +429,6 @@ module.exports = {
   AttributeValue,
   ProductVariantAttribute,
   Address,
+  ReviewImage,
+  Review,
 };

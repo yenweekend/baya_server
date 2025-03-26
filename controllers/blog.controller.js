@@ -12,7 +12,7 @@ module.exports = {
       const title = req.body.title;
       await Blog.create({ title: title });
       res.status(201).json({
-        message: "BLog added successfully",
+        msg: "BLog added successfully",
       });
     } catch (error) {
       throw error;
@@ -25,7 +25,7 @@ module.exports = {
       });
 
       if (!blog) {
-        return res.status(404).json({ message: "Blog not found" });
+        return res.status(404).json({ msg: "Blog not found" });
       }
 
       const { content, thumbnail, title } = req.body.data;
@@ -33,7 +33,7 @@ module.exports = {
       const rs = await blog.createBlogDetail({ content, thumbnail, title });
 
       res.status(201).json({
-        message: "BlogDetail added successfully",
+        msg: "BlogDetail added successfully",
         rs,
       });
     } catch (error) {
@@ -55,11 +55,11 @@ module.exports = {
       });
 
       if (!blog) {
-        return res.status(404).json({ message: "Blog not found" });
+        return res.status(404).json({ msg: "Blog not found" });
       }
 
       res.status(200).json({
-        message: "Get Blog Detail successfully",
+        msg: "Get Blog Detail successfully",
         data: blog,
       });
     } catch (error) {
@@ -102,10 +102,10 @@ module.exports = {
       });
 
       if (!blogDetail) {
-        return res.status(404).json({ message: "Blog not found" });
+        return res.status(404).json({ msg: "Blog not found" });
       }
       res.status(200).json({
-        message: "Get Blog Detail successfully",
+        msg: "Get Blog Detail successfully",
         data: blogDetail,
         relateBlogs: relatedBlogs,
       });
@@ -129,7 +129,7 @@ module.exports = {
         limit: 4,
       });
       res.status(200).json({
-        message: "Get Blog Detail successfully",
+        msg: "Get Blog Detail successfully",
         data: latestBlogs,
       });
     } catch (error) {

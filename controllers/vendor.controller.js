@@ -7,7 +7,7 @@ module.exports = {
       const vendorTitles = req.body.vendors; // Expecting an array of vendor names from the request body
 
       if (!Array.isArray(vendorTitles) || vendorTitles.length === 0) {
-        return res.status(400).json({ message: "Invalid vendor data" });
+        return res.status(400).json({ msg: "Invalid vendor data" });
       }
 
       // Step 1: Get existing vendors
@@ -31,7 +31,7 @@ module.exports = {
       }
 
       res.status(201).json({
-        message: "Vendors added successfully",
+        msg: "Vendors added successfully",
       });
     } catch (error) {
       throw error;

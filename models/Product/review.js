@@ -12,7 +12,6 @@ const Review = sequelize.define(
     },
     product_id: {
       type: DataTypes.STRING,
-      allowNull: false,
       references: {
         model: "product",
         key: "id",
@@ -22,7 +21,6 @@ const Review = sequelize.define(
     },
     user_id: {
       type: DataTypes.STRING,
-      allowNull: false,
       references: {
         model: "users",
         key: "id",

@@ -25,7 +25,7 @@ module.exports = {
       },
     });
     if (!category) {
-      return res.status(404).json({ message: "Không tìm thấy danh mục" });
+      return res.status(404).json({ msg: "Không tìm thấy danh mục" });
     }
     let order = [];
     if (sort) {

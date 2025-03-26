@@ -7,13 +7,13 @@ module.exports = {
     if (newAttr) {
       return res.json({
         success: true,
-        message: "add attribute successfully",
+        msg: "add attribute successfully",
         data: newAttr,
       });
     }
     return res.json({
       success: false,
-      message: `add attribute failed `,
+      msg: `add attribute failed `,
     });
   }),
   createBulkAttribute: asyncHandler(async (req, res) => {
@@ -22,7 +22,7 @@ module.exports = {
     if (rs) {
       return res.json({
         success: true,
-        message: "add attrs successfully",
+        msg: "add attrs successfully",
       });
     }
   }),
@@ -35,12 +35,12 @@ module.exports = {
     });
     if (!attribute) {
       res.status(404).json({
-        message: "Không tìm thấy attribute",
+        msg: "Không tìm thấy attribute",
       });
     }
     await attribute.createAttributeValue({ value: data.value });
     res.status(201).json({
-      message: "Thêm giá trị cho attr thành công",
+      msg: "Thêm giá trị cho attr thành công",
     });
   }),
 };

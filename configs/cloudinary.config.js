@@ -12,7 +12,7 @@ const storage = new CloudinaryStorage({
   cloudinary,
   allowedFormats: ["jpg", "png", "jpeg"],
   params: {
-    folder: "beautybox",
+    folder: "baya-reviews",
   },
 });
 const uploadCloud = multer({ storage });

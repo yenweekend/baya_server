@@ -12,40 +12,36 @@ const { Op } = require("sequelize");
 const ctrls = require("../services/product.service");
 
 module.exports = {
-  createCollections: asyncHandler(async (req, res, next) => {
-    try {
-      const collections = req.body.collections;
+  createCollections: asyncHandler(async (req, res) => {
+    const collections = req.body.collections;
 
-      if (!Array.isArray(collections) || collections.length === 0) {
-        return res.status(400).json({ message: "Invalid collection data" });
-      }
-      const collectionTitles = collections.map((item) => item.title);
-
-      // Check existing collections in DB
-      const existingCollections = await Collection.findAll({
-        where: { title: { [Op.in]: collectionTitles } },
-        attributes: ["title"],
-      });
-
-      const existingTitles = existingCollections.map(
-        (collection) => collection.title
-      );
-
-      // Filter out duplicates and include thumbnails
-      const newCollections = collections.filter(
-        (item) => !existingTitles.includes(item.title)
-      );
-
-      if (newCollections.length > 0) {
-        await Collection.bulkCreate(newCollections); // Now includes title + thumbnail
-      }
-
-      res.status(201).json({
-        message: "Collections added successfully",
-      });
-    } catch (error) {
-      next(error); // Passes error to error-handling middleware
+    if (!Array.isArray(collections) || collections.length === 0) {
+      return res.status(400).json({ msg: "Invalid collection data" });
     }
+    const collectionTitles = collections.map((item) => item.title);
+
+    // Check existing collections in DB
+    const existingCollections = await Collection.findAll({
+      where: { title: { [Op.in]: collectionTitles } },
+      attributes: ["title"],
+    });
+
+    const existingTitles = existingCollections.map(
+      (collection) => collection.title
+    );
+
+    // Filter out duplicates and include thumbnails
+    const newCollections = collections.filter(
+      (item) => !existingTitles.includes(item.title)
+    );
+
+    if (newCollections.length > 0) {
+      await Collection.bulkCreate(newCollections); // Now includes title + thumbnail
+    }
+
+    res.status(201).json({
+      msg: "Collections added successfully",
+    });
   }),
   getPaginatedCollectionProducts: asyncHandler(async (req, res, next) => {
     const { slug } = req.params;
@@ -63,7 +59,7 @@ module.exports = {
     });
 
     if (!collection) {
-      return res.status(404).json({ message: "Không tìm thấy sưu tập" });
+      return res.status(404).json({ msg: "Không tìm thấy sưu tập" });
     }
     let order = [];
     if (sort) {
@@ -116,7 +112,12 @@ module.exports = {
         {
           model: Vendor,
           attributes: ["id", "title", "url", "slug"],
-          required: false,
+        },
+        {
+          as: "collections",
+          model: Collection,
+          where: { id: collection.id }, // Filter by category and subcategories
+          through: { attributes: [] }, // Exclude junction table attributes
         },
       ],
     });
@@ -139,7 +140,7 @@ module.exports = {
           model: Vendor,
           attributes: ["title", "url", "slug"],
           where: vendorConditions,
-          required: false,
+          required: Object.keys(vendorConditions).length > 0, // get all vendor when there is no conditions although it get vendor_id null in product
         },
         {
           as: "collections",
