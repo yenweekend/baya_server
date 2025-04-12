@@ -105,11 +105,13 @@ module.exports = {
     );
     res.clearCookie("refreshToken", {
       httpOnly: true,
-      secure: true,
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
+      secure: process.env.NODE_ENV === "production",
     });
     res.clearCookie("accessToken", {
       httpOnly: true,
-      secure: true,
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
+      secure: process.env.NODE_ENV === "production",
     });
     return res.status(201).json({
       msg: "You have been logged out!",
@@ -148,7 +150,6 @@ module.exports = {
         httpOnly: true,
         maxAge: 60 * 1000, // 1 minutes,
         sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
-
         secure: process.env.NODE_ENV === "production",
       });
       return res.status(200).json({
@@ -233,7 +234,8 @@ module.exports = {
       if (req.cookies.refreshToken) {
         res.clearCookie("refreshToken", {
           httpOnly: true,
-          secure: true,
+          sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
+          secure: process.env.NODE_ENV === "production",
         });
       }
       return res.status(200).json({
@@ -247,7 +249,8 @@ module.exports = {
         if (req.cookies.refreshToken) {
           res.clearCookie("refreshToken", {
             httpOnly: true,
-            secure: true,
+            sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
+            secure: process.env.NODE_ENV === "production",
           });
         }
         return res.status(403).json({

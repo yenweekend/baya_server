@@ -32,7 +32,7 @@ module.exports = {
     }
     await hincreby(`cart:${userId}`, `product:${productId}`, payload);
     const sl = await hget(`cart:${userId}`, `product:${productId}`);
-    return res.json({
+    return res.status(201).json({
       success: true,
       msg: "Đã thêm sản phẩm vào giỏ hàng",
       soluong: sl,
